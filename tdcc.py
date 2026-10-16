@@ -11,7 +11,7 @@ HEADERS = {
     "Referer": "https://www.tdcc.com.tw/",
 }
 
-# 1~15 ¯Åªº¹ï·Ó¡A¥Î¨Óºâ±i¼Æ
+# 1~15 ç´šçš„å°ç…§ï¼Œç”¨ä¾†ç®—å¼µæ•¸
 LEVEL_MAP = {
     1: (1, 999),
     2: (1000, 5000),
@@ -21,33 +21,33 @@ LEVEL_MAP = {
     6: (20001, 30000),
     7: (30001, 40000),
     8: (40001, 50000),
-    9: (50001, 100000), # <=100±i
+    9: (50001, 100000), # <=100å¼µ
     10: (100001, 200000),
     11: (200001, 400000),
     12: (400001, 600000),
     13: (600001, 800000),
     14: (800001, 1000000),
-    15: (1000001, 999999999), # >=1000±i
+    15: (1000001, 999999999), # >=1000å¼µ
 }
 
 def get_valid_4digit_codes():
-    """§ì¤W¥«+¤WÂd´¶³qªÑ¡A®³¨Ó¹LÂoETF/DR/¿³Âd"""
+    """æŠ“ä¸Šå¸‚+ä¸Šæ«ƒæ™®é€šè‚¡ï¼Œæ‹¿ä¾†éæ¿¾ETF/DR/èˆˆæ«ƒ"""
     codes = set()
     twse_count, tpex_count = 0, 0
 
-    # 1. ¤W¥« - TWSE©x¤è
+    # 1. ä¸Šå¸‚ - TWSEå®˜æ–¹
     try:
         r = requests.get("https://openapi.twse.com.tw/v1/opendata/t187ap03_L", timeout=15, headers=HEADERS).json()
         for row in r:
-            c = str(row.get("¤½¥q¥N¸¹") or "").strip()
+            c = str(row.get("å…¬å¸ä»£è™Ÿ") or "").strip()
             if re.match(r'^\d{4}$', c):
                 codes.add(c)
         twse_count = len([c for c in codes])
-        print(f"TWSE¤W¥«§ì¨ì {twse_count} ÀÉ")
+        print(f"TWSEä¸Šå¸‚æŠ“åˆ° {twse_count} æª”")
     except Exception as e:
-        print(f"TWSE¤W¥«¥¢±Ñ: {e}")
+        print(f"TWSEä¸Šå¸‚å¤±æ•—: {e}")
 
-    # 2. ¤WÂd - TPEX©x¤è¡A¸Õ¨â­Óºô§}
+    # 2. ä¸Šæ«ƒ - TPEXå®˜æ–¹ï¼Œè©¦å…©å€‹ç¶²å€
     for url in [
         "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
         "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03",
@@ -56,38 +56,38 @@ def get_valid_4digit_codes():
             r = requests.get(url, timeout=15, headers=HEADERS).json()
             cnt_before = len(codes)
             for row in r:
-                c = str(row.get("CompanyCode") or row.get("¤½¥q¥N¸¹") or row.get("SecuritiesCompanyCode") or "").strip()
+                c = str(row.get("CompanyCode") or row.get("å…¬å¸ä»£è™Ÿ") or row.get("SecuritiesCompanyCode") or "").strip()
                 if re.match(r'^\d{4}$', c):
                     codes.add(c)
             if len(codes) > cnt_before:
-                print(f"TPEX¤WÂd±q {url} §ì¨ì {len(codes)-cnt_before} ÀÉ")
+                print(f"TPEXä¸Šæ«ƒå¾ {url} æŠ“åˆ° {len(codes)-cnt_before} æª”")
                 tpex_count = len(codes) - cnt_before
                 break
         except Exception as e:
-            print(f"TPEX {url} ¥¢±Ñ: {e}")
+            print(f"TPEX {url} å¤±æ•—: {e}")
             continue
 
-    # 3. ³Æ´© - ISIN²M³æ¡A³ÌÃ­¡A¤@©w¦³¤WÂd
-    # strMode=2 ¤W¥«, 4 ¤WÂd
+    # 3. å‚™æ´ - ISINæ¸…å–®ï¼Œæœ€ç©©ï¼Œä¸€å®šæœ‰ä¸Šæ«ƒ
+    # strMode=2 ä¸Šå¸‚, 4 ä¸Šæ«ƒ
     def fetch_isin(mode):
         try:
             url = f"https://isin.twse.com.tw/isin/C_public.jsp?strMode={mode}"
             resp = requests.get(url, headers=HEADERS, timeout=15)
             text = resp.content.decode('big5', errors='ignore')
-            # §ì <td>1101</td> ³oºØ
+            # æŠ“ <td>1101</td> é€™ç¨®
             found = set(re.findall(r'<td[^>]*>\s*(\d{4})\s*</td>', text))
-            print(f"ISIN mode={mode} §ì¨ì {len(found)} ÀÉ")
+            print(f"ISIN mode={mode} æŠ“åˆ° {len(found)} æª”")
             return found
         except Exception as e:
-            print(f"ISIN mode={mode} ¥¢±Ñ {e}")
+            print(f"ISIN mode={mode} å¤±æ•— {e}")
             return set()
 
-    if len(codes) < 1500: # ¤Ö©ó1500¥Nªí¤WÂd¨S§ì¨ì¡A±Ò¥Î³Æ´©
-        print("±Ò¥ÎISIN³Æ´©...")
-        codes |= fetch_isin(2) # ¤W¥«
-        codes |= fetch_isin(4) # ¤WÂd
+    if len(codes) < 1500: # å°‘æ–¼1500ä»£è¡¨ä¸Šæ«ƒæ²’æŠ“åˆ°ï¼Œå•Ÿç”¨å‚™æ´
+        print("å•Ÿç”¨ISINå‚™æ´...")
+        codes |= fetch_isin(2) # ä¸Šå¸‚
+        codes |= fetch_isin(4) # ä¸Šæ«ƒ
 
-    print(f"³Ì²×¦³®Ä¤W¥«Âd´¶³qªÑ: {len(codes)} ÀÉ")
+    print(f"æœ€çµ‚æœ‰æ•ˆä¸Šå¸‚æ«ƒæ™®é€šè‚¡: {len(codes)} æª”")
     return codes
 
 def fetch_tdcc():
@@ -104,7 +104,7 @@ def fetch_tdcc():
     ]
     for url in urls:
         try:
-            print(f"§ì: {url}")
+            print(f"æŠ“: {url}")
             resp = sess.get(url, timeout=30)
             if resp.status_code!= 200 or len(resp.content) < 1000:
                 continue
@@ -112,37 +112,37 @@ def fetch_tdcc():
                 df = pd.read_csv(io.BytesIO(resp.content), encoding="big5")
             except:
                 df = pd.read_csv(io.BytesIO(resp.content), encoding="utf-8")
-            if "ÃÒ¨é¥N¸¹" in "".join(map(str, df.columns)):
+            if "è­‰åˆ¸ä»£è™Ÿ" in "".join(map(str, df.columns)):
                 return df
         except TooManyRedirects:
             continue
         except Exception as e:
             print(e)
             continue
-    raise RuntimeError("TDCC§ì¨ú¥¢±Ñ")
+    raise RuntimeError("TDCCæŠ“å–å¤±æ•—")
 
 def main():
     raw = fetch_tdcc()
     raw.columns = raw.columns.str.strip()
     raw = raw.rename(columns={
-        "¸ê®Æ¤é´Á": "tdcc_date",
-        "ÃÒ¨é¥N¸¹": "stock_id",
-        "«ùªÑ¤À¯Å": "level",
-        "¤H¼Æ": "holders",
-        "ªÑ¼Æ": "shares",
-        "¥e¶°«O®w¦s¼Æ¤ñ¨Ò%": "pct",
-        "¥e¶°«O®w¦s¼Æ¤ñ¨Ò": "pct"
+        "è³‡æ–™æ—¥æœŸ": "tdcc_date",
+        "è­‰åˆ¸ä»£è™Ÿ": "stock_id",
+        "æŒè‚¡åˆ†ç´š": "level",
+        "äººæ•¸": "holders",
+        "è‚¡æ•¸": "shares",
+        "å é›†ä¿åº«å­˜æ•¸æ¯”ä¾‹%": "pct",
+        "å é›†ä¿åº«å­˜æ•¸æ¯”ä¾‹": "pct"
     })
 
-    # --- ­×¥¿¤é´Á¸ÑªR ---
+    # --- ä¿®æ­£æ—¥æœŸè§£æ ---
     def parse_tdcc_date(v):
         s = str(v).strip()
         try:
-            # 114/05/16 ©Î 2025/05/16 ³oºØ
+            # 114/05/16 æˆ– 2025/05/16 é€™ç¨®
             if "/" in s or "-" in s:
                 return pd.to_datetime(s).date()
             digits = re.sub(r"\D", "", s)
-            if len(digits) == 7: # 1140516 = ¥Á°ê¦~
+            if len(digits) == 7: # 1140516 = æ°‘åœ‹å¹´
                 y = int(digits[:3]) + 1911
                 m = int(digits[3:5])
                 d = int(digits[5:7])
@@ -169,9 +169,9 @@ def main():
     raw = raw[~raw["stock_id"].str.startswith("91")]
     raw = raw[~raw["stock_id"].str.startswith("92")]
 
-    # §ì¥¿½Tªº¸ê®Æ¤é´Á
+    # æŠ“æ­£ç¢ºçš„è³‡æ–™æ—¥æœŸ
     snapshot_date = parse_tdcc_date(raw["tdcc_date"].iloc[0])
-    print(f"¥»¦¸¸ê®Æ¤é´Á: {snapshot_date} ¦@¦³ {raw['stock_id'].nunique()} ÀÉ")
+    print(f"æœ¬æ¬¡è³‡æ–™æ—¥æœŸ: {snapshot_date} å…±æœ‰ {raw['stock_id'].nunique()} æª”")
 
     result = []
     for sid, g in raw.groupby("stock_id"):
@@ -187,7 +187,7 @@ def main():
 
     new_df = pd.DataFrame(result)
 
-    # ¥u¯d2¶g
+    # åªç•™2é€±
     two_weeks_path = f"{DATA_DIR}/tdcc_2weeks.parquet"
     if os.path.exists(two_weeks_path):
         old = pd.read_parquet(two_weeks_path)
@@ -205,7 +205,7 @@ def main():
     latest.to_csv(f"{DATA_DIR}/tdcc_latest.csv", index=False, encoding="utf-8-sig")
     latest.to_parquet(f"{DATA_DIR}/tdcc_latest.parquet", index=False)
 
-    print(f"¤w«O¯d2¶g: {dates} ¦@ {len(combined)} µ§")
+    print(f"å·²ä¿ç•™2é€±: {dates} å…± {len(combined)} ç­†")
 
 if __name__ == "__main__":
     main()
