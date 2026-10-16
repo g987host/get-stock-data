@@ -1,0 +1,12 @@
+on:
+  schedule:
+    - cron: '0 20 10 * *' # 每月10號 20:00台北時間
+    - cron: '0 20 * * 5' # 每週五 20:00台北時間
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: pip install pandas requests
+      - run: python revenue.py
+      - run: python tdcc.py
