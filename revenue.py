@@ -125,24 +125,27 @@ def main(init=False):
             old=pd.concat([old,fin],ignore_index=True)
             print(f"FINLAB合併 {len(fin)} 筆")
 
+# 簡單寬鬆過濾就好，不要再用 valid 去砍 FINLAB
     combined=pd.concat([old,new_df],ignore_index=True)
     if combined.empty:
-        print("沒有任何資料，可能是本月營收還沒公布，跳過")
+        print("沒有任何資料，跳過")
         return
-
+    combined["stock_id"]=combined["stock_id"].astype(str).str.strip()
+    combined=combined[combined["stock_id"].str.match(r'^\d{4}$',na=False)]
+    combined=combined[~combined["stock_id"].str.startswith("00")]
+    combined=combined[~combined["stock_id"].str.startswith("91")]
+    combined=combined[~combined["stock_id"].str.startswith("92")]
     combined=combined.drop_duplicates(subset=["stock_id","revenue_month"],keep="last")
+    # 這行改掉，舊的 apply 會讓 stock_id 消失
     combined=combined.sort_values(["stock_id","revenue_month"])
-    combined=combined.groupby("stock_id",group_keys=False).apply(lambda g: g.tail(13))
-
+    combined=combined.groupby("stock_id", as_index=False, group_keys=False).tail(13)
     combined.to_parquet(path13,index=False)
-    
-    if not combined.empty:
-        latest_month=combined["revenue_month"].max()
-        latest=combined[combined["revenue_month"]==latest_month]
-        latest.to_csv(f"{DATA_DIR}/revenue_latest.csv",index=False,encoding="utf-8-sig")
-        print(f"完成 13個月共 {len(combined)} 筆，最新月份 {latest_month} 有 {latest['stock_id'].nunique()} 檔")
-    else:
-        print("合併後還是空的")
+    latest_month=combined["revenue_month"].max()
+    latest=combined[combined["revenue_month"]==latest_month].copy()
+    # 防呆，就算空的也有欄位
+    latest.to_csv(f"{DATA_DIR}/revenue_latest.csv",index=False,encoding="utf-8-sig")
+    count = latest["stock_id"].nunique() if "stock_id" in latest.columns else 0
+    print(f"完成 13個月共 {len(combined)} 筆，最新月份 {latest_month} 有 {count} 檔")
 
 if __name__=="__main__":
     main()
