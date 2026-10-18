@@ -176,11 +176,13 @@ def main():
     result = []
     for sid, g in raw.groupby("stock_id"):
         under_100 = g[g["level"].between(1, 9)]["pct"].sum()
+        over_400 = g[g["level"].between(10, 15)]["pct"].sum()
         over_1000 = g[g["level"] == 15]["pct"].sum()
         result.append({
             "stock_id": sid,
             "tdcc_date": snapshot_date,
             "pct_under_100": round(float(under_100), 4),
+            "pct_over_400": round(float(over_400), 4),
             "pct_over_1000": round(float(over_1000), 4),
             "total_holders": int(g["holders"].sum()) if "holders" in g.columns else 0
         })
