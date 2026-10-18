@@ -1,9 +1,8 @@
 name: daily-tw-stock
 on:
   schedule:
-    - cron: '30 7 * * 1-5' # 台北 14:30 = UTC 06:30，週一到週五
+    - cron: '30 7 * * 1-5'
   workflow_dispatch:
-
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -14,10 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements.txt
+      - run: pip install pandas pyarrow requests
       - run: python scripts/fetch.py
-        env:
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
       - run: |
           git config user.name "bot"
           git config user.email "bot@github.com"
