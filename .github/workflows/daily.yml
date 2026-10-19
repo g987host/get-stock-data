@@ -16,8 +16,6 @@ jobs:
           python-version: '3.11'
       - run: pip install pandas pyarrow requests
       - run: python scripts/fetch.py
-        env:
-          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
       - run: |
           git config user.name "bot"
           git config user.email "bot@github.com"
