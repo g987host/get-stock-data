@@ -52,11 +52,14 @@ def fetch_tpex_openapi():
         for x in data:
             sid=x["SecuritiesCompanyCode"]
             if len(sid)!=4 or not sid.isdigit(): continue
-            rows.append({"stock_id":sid,"date":x["Date"],"close":float(str(x["Close"]).replace(",",""))})
+            roc = x["Date"]  # 114/10/17
+            y,m,d = roc.split("/")
+            ad = f"{int(y)+1911:04d}/{int(m):02d}/{int(d):02d}"  # 轉西元
+            rows.append({"stock_id":sid,"date":ad,"close":float(str(x["Close"]).replace(",",""))})
         df=pd.DataFrame(rows)
         if not df.empty:
             df["date"]=pd.to_datetime(df["date"])
-        print(f"TPEX OpenAPI {len(df)}")
+        print(f"TPEX OpenAPI {len(df)} 筆 {df['date'].max().date() if not df.empty else ''}")
         return df
     except Exception as e:
         print(f"TPEX失敗 {e}")
