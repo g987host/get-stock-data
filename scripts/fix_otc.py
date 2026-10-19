@@ -1,66 +1,56 @@
-import time, requests, pandas as pd
+import os, time, requests, pandas as pd
 from datetime import datetime
 
 PATH = "data/tw_close_110d.parquet"
+TOKEN = os.getenv("FINMIND_TOKEN")
 
-def fetch_tpex_one(roc_date, slash_date):
-    # 方法1: 舊版 otc_quotes_no1430 (要用民國年)
-    urls = [
-        f"https://www.tpex.org.tw/web/stock/aftertrading/otc_quotes_no1430/stk_quote_result.php?l=zh-tw&o=json&se=AL&d={roc_date}&s=0,asc,0",
-        f"https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?l=zh-tw&o=json&se=AL&d={roc_date}&s=0,asc,0",
-    ]
-    headers = {"User-Agent":"Mozilla/5.0", "Referer":"https://www.tpex.org.tw/"}
-    for url in urls:
-        try:
-            r = requests.get(url, headers=headers, timeout=30)
-            if not r.text or not r.text.strip().startswith("{"):
-                continue
-            j = r.json()
-            if "aaData" not in j or not j["aaData"]:
-                continue
-            rows = []
-            for arr in j["aaData"]:
-                try:
-                    rows.append({"stock_id": arr[0].strip(), "date": slash_date.replace("/",""), "close": float(arr[2].replace(",",""))})
-                except: continue
-            if rows:
-                return pd.DataFrame(rows)
-        except Exception as e:
-            print(f"  TPEX {roc_date} {url} fail {e}")
-    return pd.DataFrame()
+def fetch_one_otc(stock_id, start_date, end_date):
+    url = "https://api.finmindtrade.com/api/v4/data"
+    headers = {"Authorization": f"Bearer {TOKEN}"}
+    params = {
+        "dataset": "TaiwanStockPrice",
+        "data_id": stock_id,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+    try:
+        r = requests.get(url, params=params, headers=headers, timeout=30)
+        j = r.json()
+        if j.get("status") != 200:
+            # 402 就是被限速
+            if "quota" in j.get("msg","").lower() or j.get("status")==402:
+                print("限速了，睡60秒")
+                time.sleep(60)
+            return pd.DataFrame()
+        return pd.DataFrame(j.get("data", []))
+    except Exception as e:
+        print(f"{stock_id} fail {e}")
+        return pd.DataFrame()
 
-# 1. 讀你現有的 110 天 (只有上市)
+# 1. 讀你現有的上市 110 天
 df_old = pd.read_parquet(PATH)
 df_old["date"] = pd.to_datetime(df_old["date"])
-dates = sorted(df_old["date"].unique())
+start_date = df_old["date"].min().strftime("%Y-%m-%d")
+end_date = df_old["date"].max().strftime("%Y-%m-%d")
+print(f"要補 {start_date} ~ {end_date}")
 
-print(f"現有 {len(dates)} 天, 範例 {dates[-1].date()}")
+# 2. 拿上櫃清單 (用櫃買 OpenAPI 抓代號，這支不會擋)
+r = requests.get("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes", timeout=30)
+otc_list = [x["SecuritiesCompanyCode"] for x in r.json()]
+print(f"上櫃清單 {len(otc_list)} 檔")
 
-# 2. 只補這些日期的上櫃
-otc_all = []
-for d in dates[-110:]:  # 就補你現有的 110 天
-    slash = d.strftime("%Y/%m/%d")
-    y,m,dd = slash.split("/")
-    roc = f"{int(y)-1911}/{m}/{dd}"
-    df_otc = fetch_tpex_one(roc, slash)
-    print(f"{slash} -> {roc} TPEX:{len(df_otc)}")
-    if not df_otc.empty:
-        otc_all.append(df_otc)
-    time.sleep(1.2)
+# 3. 一檔一檔抓 110 天
+all_otc = []
+for i, sid in enumerate(otc_list):
+    df = fetch_one_otc(sid, start_date, end_date)
+    if not df.empty:
+        all_otc.append(df[["stock_id","date","close"]])
+        print(f"{i+1}/{len(otc_list)} {sid} OK {len(df)}")
+    time.sleep(6.5)  # 600次/小時 = 6秒一次，才不會 402
 
-if otc_all:
-    df_otc_all = pd.concat(otc_all, ignore_index=True)
-    df_otc_all["date"] = pd.to_datetime(df_otc_all["date"], format="%Y%m%d")
-    
-    df_merged = pd.concat([df_old, df_otc_all], ignore_index=True).drop_duplicates(subset=["stock_id","date"], keep="last")
+if all_otc:
+    df_otc = pd.concat(all_otc, ignore_index=True)
+    df_otc["date"] = pd.to_datetime(df_otc["date"])
+    df_merged = pd.concat([df_old, df_otc], ignore_index=True).drop_duplicates(subset=["stock_id","date"], keep="last")
     df_merged.to_parquet(PATH, index=False)
-    print(f"合併完成 {len(df_old)} -> {len(df_merged)} rows")
-    print(df_merged[df_merged["stock_id"]=="3706"].tail())
-else:
-    print("上櫃還是抓不到，把上面印的錯誤貼給我")
-    # 最後備援: 用 OpenAPI 抓當天上櫃
-    try:
-        r = requests.get("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes", timeout=30)
-        print("OpenAPI 回應", r.text[:300])
-    except Exception as e:
-        print("OpenAPI 也失敗", e)
+    print(f"合併完成 {len(df_old)} -> {len(df_merged)}")
