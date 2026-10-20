@@ -10,15 +10,21 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-    name: Install deps (鎖 numpy 1.x 避開 _ARRAY_API)
-      - run: |
+
+      - name: Install deps (鎖 numpy 1.x 避開 _ARRAY_API)
+        run: |
           pip install --upgrade pip
           pip install "numpy==1.26.4" "pandas>=2.2" pyarrow requests
-      - run: python scripts/fetch.py
-      - run: |
+
+      - name: Run fetch
+        run: python scripts/fetch.py
+
+      - name: Commit parquet
+        run: |
           git config user.name "bot"
           git config user.email "bot@github.com"
           git add data/tw_close_110d.parquet
