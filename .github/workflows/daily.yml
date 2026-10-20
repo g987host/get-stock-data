@@ -18,7 +18,8 @@ jobs:
       - name: Install deps (鎖 numpy 1.x 避開 _ARRAY_API)
         run: |
           pip install --upgrade pip
-          pip install "numpy==1.26.4" "pandas>=2.2" pyarrow requests
+          pip install "numpy==1.26.4" "pandas==2.2.2" "pyarrow==15.0.2" requests
+          python -c "import pyarrow; print(pyarrow.__version__)"
 
       - name: Run fetch
         run: python scripts/fetch.py
