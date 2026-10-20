@@ -15,27 +15,58 @@ def get_with_retry(url, **kwargs):
             time.sleep(5)
     return None
 
-def fetch_twse_day(slash_date):
-    yyyymmdd = slash_date.replace("/","")
-    url = f"https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={yyyymmdd}&type=ALL&response=json"
-    r = get_with_retry(url)
+def fetch_twse_day(slash_date=None): # slash_date 已不用，留著避免呼叫處壞掉
+    url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL"
+    headers = {
+        "accept": "application/json",
+        "If-Modified-Since": "Mon, 26 Jul 1997 05:00:00 GMT",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "User-Agent": "Mozilla/5.0"
+    }
+    r = get_with_retry(url, headers=headers)
     if not r: return pd.DataFrame()
     try:
-        j=r.json()
-        if j.get("stat")!="OK": return pd.DataFrame()
+        data = r.json()
         rows=[]
-        for t in j.get("tables",[]):
-            if "每日收盤行情" not in t.get("title",""): continue
-            for arr in t["data"]:
-                sid=arr[0].strip()
-                if len(sid)!=4 or not sid.isdigit(): continue
-                rows.append({"stock_id":sid,"date":yyyymmdd,"close":float(arr[2].replace(",",""))})
+        for x in data:
+            sid = str(x.get("Code","")).strip()
+            if len(sid)!=4 or not sid.isdigit(): continue
+
+            raw = str(x.get("Date","")).strip() # 1151019
+            try:
+                if "/" in raw:
+                    y,m,d = raw.split("/")
+                    y=int(y)
+                    if y<1000: y+=1911
+                else:
+                    raw = raw.zfill(7)
+                    if len(raw)==7: # 1151019
+                        y,m,d = int(raw[:3]), int(raw[3:5]), int(raw[5:7])
+                    else: # 20251020
+                        y,m,d = int(raw[:4]), int(raw[4:6]), int(raw[6:8])
+                    if y<1000: y+=1911
+                date_str = f"{y:04d}{m:02d}{d:02d}"
+            except:
+                continue
+
+            close_str = str(x.get("ClosingPrice","")).replace(",","").strip()
+            if close_str in ("","-","--"): continue
+            try:
+                close = float(close_str)
+            except:
+                continue
+
+            rows.append({"stock_id":sid,"date":date_str,"close":close})
+
         df=pd.DataFrame(rows)
         if not df.empty:
             df["date"]=pd.to_datetime(df["date"], format="%Y%m%d")
-        print(f"{slash_date} TSE {len(df)}")
+        print(f"{df['date'].max().date() if not df.empty else 'N/A'} TSE {len(df)} (STOCK_DAY_AVG_ALL)")
         return df
-    except: return pd.DataFrame()
+    except Exception as e:
+        print(f"TSE失敗 {e}")
+        return pd.DataFrame()
 
 def fetch_tpex_openapi():
     url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes"
