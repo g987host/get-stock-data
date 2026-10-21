@@ -1,8 +1,8 @@
 name: daily-tw-stock
 on:
   schedule:
-    - cron: '36 8 * * 1-5'
-    - cron: '36 13 * * 1-5'
+    - cron: '36 15 * * 1-5'
+    - cron: '36 19 * * 1-5'
   workflow_dispatch:
 jobs:
   fetch:
