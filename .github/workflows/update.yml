@@ -2,9 +2,9 @@ name: update-data
 
 on:
   schedule:
-    - cron: '0 20 * * 5'   # 每週五 20:00 台北時間 = 12:00 UTC，跑 tdcc
-    - cron: '0 20 10 * *'  # 每月10號 22:00 台北時間，跑 revenue
-    - cron: '0 20 14 * *'  # 每月14號 22:00 台北 補跑一次，最近常14號才齊
+    - cron: '55 19 * * 5'   # 每週五 20:00 台北時間 = 12:00 UTC，跑 tdcc
+    - cron: '55 19 10 * *'  # 每月10號 22:00 台北時間，跑 revenue
+    - cron: '55 19 14 * *'  # 每月14號 22:00 台北 補跑一次，最近常14號才齊
   workflow_dispatch:       # 這個一定要有，才會有 Run workflow 按鈕
 
 jobs:
