@@ -80,7 +80,7 @@ def main():
     # 只保留需要的欄位，符合你要求: 單位億元 1位小數
     df_final = df[['公司代號', '公司簡稱', '市場別', '資本額_億元', '實收資本額_元', '出表日期']]
 
-    out_path = Path("Capital.parquet")
+    out_path = Path("data/Capital.parquet")
     # 如果舊檔存在，你想保留歷史就用這個邏輯，否則直接覆蓋
     df_final.to_parquet(out_path, index=False)
     print(f"已儲存 {out_path} 共 {len(df_final)} 筆")
