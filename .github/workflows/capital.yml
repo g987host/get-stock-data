@@ -1,0 +1,25 @@
+name: Update Capital
+
+on:
+  schedule:
+    # 台北時間 4/1, 6/1, 9/1, 12/1 上午 09:00 執行 = UTC 01:00
+    - cron: '0 1 1 4,6,9,12 *'
+  workflow_dispatch: # 手動按鈕
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python update_capital.py
+      - name: Commit & Push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add Capital.parquet
+          git diff --staged --quiet || git commit -m "chore: update Capital.parquet $(date +%Y-%m-%d)"
+          git push
