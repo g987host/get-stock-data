@@ -3,6 +3,7 @@ on:
   schedule:
     - cron: '36 5 * * 1-5'
     - cron: '36 9 * * 1-5'
+    - cron: '36 17 * * 1-5'
   workflow_dispatch:
 jobs:
   fetch:
